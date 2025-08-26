@@ -2,17 +2,21 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <!-- Измененный viewport: блокирует зум и устанавливает начальный масштаб 1.0 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Задания за вознаграждение</title>
-    <!-- Подключаем Telegram SDK -->
+    
+    <!-- Telegram SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    
+    <!-- Yandex.RTB -->
+    <script>window.yaContextCb=window.yaContextCb||[]</script>
+    <script src="https://yandex.ru/ads/system/context.js" async></script>
+
     <style>
         :root {
             --tg-bg-color: var(--tg-theme-bg-color, #ffffff);
             --tg-text-color: var(--tg-theme-text-color, #222222);
             --tg-hint-color: var(--tg-theme-hint-color, #999999);
-            --tg-link-color: var(--tg-theme-link-color, #007bff);
             --tg-button-color: var(--tg-theme-button-color, #007bff);
             --tg-button-text-color: var(--tg-theme-button-text-color, #ffffff);
             --tg-secondary-bg-color: var(--tg-theme-secondary-bg-color, #f1f1f1);
@@ -23,13 +27,10 @@
             background-color: var(--tg-bg-color);
             color: var(--tg-text-color);
             margin: 0;
-            /* Уменьшил отступы */
             padding: 12px;
             display: flex;
             flex-direction: column;
             align-items: center;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
         }
 
         .container {
@@ -40,16 +41,13 @@
         .card {
             background-color: var(--tg-secondary-bg-color);
             border-radius: 12px;
-            /* Уменьшил внутренние отступы */
             padding: 16px;
             margin-bottom: 12px;
-            box-shadow: 0 4px A12px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
         }
 
-        /* Карточка баланса */
         .balance-card h2 {
             margin: 0 0 4px;
-            /* Уменьшил размер шрифта */
             font-size: 15px;
             color: var(--tg-hint-color);
             font-weight: 600;
@@ -57,13 +55,10 @@
 
         .balance-card p {
             margin: 0;
-            /* Уменьшил размер шрифта */
             font-size: 28px;
             font-weight: 700;
-            color: var(--tg-text-color);
         }
 
-        /* Карточка задания */
         .task-card {
             display: flex;
             align-items: center;
@@ -72,14 +67,12 @@
 
         .task-info h3 {
             margin: 0 0 4px;
-            /* Уменьшил размер шрифта */
             font-size: 17px;
             font-weight: 600;
         }
 
         .task-info .reward {
             margin: 0;
-            /* Уменьшил размер шрифта */
             font-size: 15px;
             font-weight: 600;
             color: #34C759;
@@ -90,132 +83,202 @@
             color: var(--tg-button-text-color);
             border: none;
             border-radius: 8px;
-            /* Уменьшил отступы и размер шрифта */
             padding: 10px 18px;
             font-size: 15px;
             font-weight: 600;
             cursor: pointer;
-            transition: background-color 0.2s, transform 0.2s;
+            transition: background-color 0.2s;
             white-space: nowrap;
         }
-
-        .task-button:hover {
-            transform: scale(1.05);
+        
+        .task-button.processing { background-color: #ff9500; cursor: not-allowed; }
+        .task-button.completed { background-color: #34C759; cursor: not-allowed; }
+        
+        /* Стили для модального окна с рекламой */
+        .ad-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: none; /* Скрыто по умолчанию */
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            flex-direction: column;
         }
 
-        .task-button:disabled:hover {
-            transform: none;
+        .ad-modal-content {
+            position: relative;
+            width: 90%;
+            max-width: 400px; /* Ограничение ширины рекламного блока */
         }
-
-        .task-button.processing {
-            background-color: #ff9500;
-            cursor: not-allowed;
-        }
-
-        .task-button.completed {
-            background-color: #34C759;
-            cursor: not-allowed;
-        }
-
-        .footer-hint {
-            text-align: center;
-            /* Уменьшил размер шрифта */
-            font-size: 13px;
-            color: var(--tg-hint-color);
-            margin-top: 15px;
+        
+        .close-ad-button {
+            margin-top: 20px;
+            padding: 10px 25px;
+            font-size: 16px;
+            font-weight: 600;
+            color: #000;
+            background-color: #fff;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
         }
     </style>
 </head>
 <body>
 
     <div class="container">
+        <!-- Карточка Баланса -->
         <div class="card balance-card">
             <h2>Ваш баланс</h2>
             <p><span id="balance">0</span> ₽</p>
         </div>
 
+        <!-- Задание 1: Установить Браузер -->
         <div class="card task-card">
             <div class="task-info">
                 <h3>Установить Яндекс Браузер</h3>
                 <p class="reward">+200 ₽</p>
             </div>
-            <button id="task-button" class="task-button">Выполнить</button>
+            <button id="install-task-button" class="task-button">Выполнить</button>
         </div>
-
-        <p class="footer-hint">
-            Проверка задания может занять до 48 часов.
-        </p>
+        
+        <!-- Задание 2: Смотреть рекламу -->
+        <div class="card task-card">
+            <div class="task-info">
+                <h3>Смотреть рекламу</h3>
+                <p class="reward">+10 ₽</p>
+            </div>
+            <button id="ad-task-button" class="task-button">Смотреть</button>
+        </div>
     </div>
+
+    <!-- Модальное окно для показа рекламы (изначально скрыто) -->
+    <div id="ad-modal" class="ad-modal">
+        <div class="ad-modal-content">
+            <!-- Yandex.RTB R-A-16969461-1 -->
+            <div id="yandex_rtb_R-A-16969461-1"></div>
+        </div>
+        <button id="close-ad-button" class="close-ad-button">Закрыть</button>
+    </div>
+
+    <!-- Скрипт для рендеринга рекламы Яндекса -->
+    <script>
+    window.yaContextCb.push(() => {
+        Ya.Context.AdvManager.render({
+            "blockId": "R-A-16969461-1",
+            "renderTo": "yandex_rtb_R-A-16969461-1"
+        })
+    })
+    </script>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const tg = window.Telegram.WebApp;
 
-            const taskUrl = 'https://browser.yandex.ru/download?partner_id=831050&banerid=1313635482';
-            const rewardAmount = 200;
-            const processingTimeMs = 48 * 60 * 60 * 1000;
-
+            // --- Элементы UI ---
             const balanceElement = document.getElementById('balance');
-            const taskButton = document.getElementById('task-button');
+            const installTaskButton = document.getElementById('install-task-button');
+            const adTaskButton = document.getElementById('ad-task-button');
+            const adModal = document.getElementById('ad-modal');
+            const closeAdButton = document.getElementById('close-ad-button');
 
+            // --- Состояние приложения ---
             let currentBalance = parseInt(localStorage.getItem('userBalance')) || 0;
-            let taskState = localStorage.getItem('taskState') || 'pending';
-            let taskClickTimestamp = parseInt(localStorage.getItem('taskClickTimestamp')) || 0;
+            
+            // Состояние для задания с установкой
+            let installTaskState = localStorage.getItem('installTaskState') || 'pending';
+            let installTaskClickTimestamp = parseInt(localStorage.getItem('installTaskClickTimestamp')) || 0;
 
-            function checkTaskCompletion() {
-                if (taskState === 'processing') {
-                    const timeElapsed = Date.now() - taskClickTimestamp;
-                    if (timeElapsed >= processingTimeMs) {
-                        taskState = 'completed';
-                        currentBalance += rewardAmount;
+            // --- Константы ---
+            const INSTALL_REWARD = 200;
+            const AD_REWARD = 10;
+            const PROCESSING_TIME_MS = 48 * 60 * 60 * 1000;
+            const INSTALL_URL = 'https://browser.yandex.ru/download?partner_id=831050&banerid=1313635482';
+
+            // --- Функции обновления UI ---
+            function updateUI() {
+                balanceElement.textContent = currentBalance;
+                updateInstallTaskButton();
+            }
+
+            function updateInstallTaskButton() {
+                installTaskButton.classList.remove('processing', 'completed');
+                switch (installTaskState) {
+                    case 'pending':
+                        installTaskButton.textContent = 'Выполнить';
+                        installTaskButton.disabled = false;
+                        break;
+                    case 'processing':
+                        installTaskButton.textContent = 'В обработке (до 48ч)';
+                        installTaskButton.disabled = true;
+                        installTaskButton.classList.add('processing');
+                        break;
+                    case 'completed':
+                        installTaskButton.textContent = 'Выполнено';
+                        installTaskButton.disabled = true;
+                        installTaskButton.classList.add('completed');
+                        break;
+                }
+            }
+
+            // --- Логика заданий ---
+            function checkInstallTaskCompletion() {
+                if (installTaskState === 'processing') {
+                    if (Date.now() - installTaskClickTimestamp >= PROCESSING_TIME_MS) {
+                        installTaskState = 'completed';
+                        currentBalance += INSTALL_REWARD;
                         localStorage.setItem('userBalance', currentBalance);
-                        localStorage.setItem('taskState', taskState);
+                        localStorage.setItem('installTaskState', installTaskState);
                         tg.showPopup({
                             title: 'Задание выполнено!',
-                            message: `Вам начислено ${rewardAmount} ₽.`,
+                            message: `Вам начислено ${INSTALL_REWARD} ₽.`,
                             buttons: [{ type: 'ok' }]
                         });
                     }
                 }
             }
 
-            function updateUI() {
-                balanceElement.textContent = currentBalance;
-                taskButton.classList.remove('processing', 'completed');
-
-                switch (taskState) {
-                    case 'pending':
-                        taskButton.textContent = 'Выполнить';
-                        taskButton.disabled = false;
-                        break;
-                    case 'processing':
-                        taskButton.textContent = 'В обработке (до 48ч)';
-                        taskButton.disabled = true;
-                        taskButton.classList.add('processing');
-                        break;
-                    case 'completed':
-                        taskButton.textContent = 'Выполнено';
-                        taskButton.disabled = true;
-                        taskButton.classList.add('completed');
-                        break;
-                }
-            }
-
-            taskButton.addEventListener('click', () => {
-                if (taskState !== 'pending') return;
-                tg.openLink(taskUrl);
-                taskState = 'processing';
-                taskClickTimestamp = Date.now();
-                localStorage.setItem('taskState', taskState);
-                localStorage.setItem('taskClickTimestamp', taskClickTimestamp);
+            // --- Обработчики событий ---
+            installTaskButton.addEventListener('click', () => {
+                if (installTaskState !== 'pending') return;
+                tg.openLink(INSTALL_URL);
+                installTaskState = 'processing';
+                installTaskClickTimestamp = Date.now();
+                localStorage.setItem('installTaskState', installTaskState);
+                localStorage.setItem('installTaskClickTimestamp', installTaskClickTimestamp);
                 updateUI();
             });
 
+            adTaskButton.addEventListener('click', () => {
+                adModal.style.display = 'flex';
+            });
+
+            closeAdButton.addEventListener('click', () => {
+                adModal.style.display = 'none';
+                
+                // Начисляем вознаграждение за просмотр
+                currentBalance += AD_REWARD;
+                localStorage.setItem('userBalance', currentBalance);
+                
+                tg.showPopup({
+                    title: 'Спасибо!',
+                    message: `Вам начислено ${AD_REWARD} ₽ за просмотр.`,
+                    buttons: [{ type: 'ok' }]
+                });
+
+                updateUI();
+            });
+
+            // --- Инициализация приложения ---
             function init() {
                 tg.ready();
                 tg.expand();
                 tg.setHeaderColor(getComputedStyle(document.documentElement).getPropertyValue('--tg-secondary-bg-color').trim());
-                checkTaskCompletion();
+                checkInstallTaskCompletion();
                 updateUI();
             }
 
